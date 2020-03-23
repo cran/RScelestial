@@ -24,7 +24,8 @@ It could be used to generate input for scelestial.
 }
 \examples{
 ## A small 0/1/NA mutation matrix
-mut = data.frame("C1" = c(0, 0), "C2" = c(0, 3), "C3" = c(1, 0))
+mut = data.frame("C1" = c(0, 0), "C2" = c(0, 3), "C3" = c(1, 0), 
+        stringsAsFactors = TRUE)
 ## Convert it to 10-state matrix
 as.ten.state.matrix(mut)
 #    C1  C2  C3

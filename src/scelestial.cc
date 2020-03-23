@@ -46,6 +46,10 @@ void load(UniverseVertexSet& universeVertexSet, DataFrame data) {
 	for (int i=0; i<data.cols(); i++) {
 		// cerr << "  iterate col=" << i << endl;
 		IntegerVector col = data[i];
+		std::string colClass = col.attr("class");
+		if (colClass != std::string("factor")) {
+			stop("columns of dataframe should have factor type");
+		}
 		// cerr << "  iterate col=" << i << " " << col << endl;
 		CharacterVector levels = col.attr("levels");
 		// cerr << "levels: " << levels << endl;

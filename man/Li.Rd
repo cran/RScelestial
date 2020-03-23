@@ -4,8 +4,10 @@
 \name{Li}
 \alias{Li}
 \title{Bladder invasive single cell tumor dataset}
-\format{Each column represent a cell and each row represent a locus. 
-"./." represent the missing value, "A/A" the normal state and "C/C" the mutated state.}
+\format{
+Each column represent a cell and each row represent a locus. 
+"./." represent the missing value, "A/A" the normal state and "C/C" the mutated state.
+}
 \source{
 \href{https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3626503/bin/2047-217X-1-12-S2.xls}{QTL Archive}
 }

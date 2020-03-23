@@ -38,7 +38,8 @@ scelestial result to 10-state sequence matrices.
 }
 \examples{
 ## A node sequence data framce
-n.seq = data.frame("node" = c("C1", "C2"), "seq" = c("AKLTCXAAC", "AKKOCXAPC"))
+n.seq = data.frame("node" = c("C1", "C2"), "seq" = c("AKLTCXAAC", "AKKOCXAPC"), 
+          stringsAsFactors = TRUE)
 ## Convert it to ten state matrix
 as.ten.state.matrix.from.node.seq(n.seq)
 #     V1  V2  V3  V4  V5  V6  V7  V8  V9

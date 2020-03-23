@@ -18,7 +18,7 @@
 #' read.sequence.table(system.file("extdata/sample1.txt", package="RScelestial"))
 #' 
 read.sequence.table <- function(file.name) {
-	utils::read.table(file.name, row.names = 1, header = TRUE);
+	utils::read.table(file.name, row.names = 1, header = TRUE, stringsAsFactors = TRUE);
 }
 
 #' Infer the single-cell phylogenetic tree
@@ -137,11 +137,11 @@ scelestial <- function(seq, mink=3, maxk=3, root.assign.method = c("none", "bala
 	}
 	
 	Y = .scelestial(seq, mink, maxk);
-	tree = data.frame("src" = Y$Esrc, "dest" = Y$Edst, "len" = Y$Ew);
-	# S = data.frame("node" = Y$sequence$node, "sequence" = Y$sequence$seq)
-	S = as.ten.state.matrix.from.node.seq(data.frame("node" = Y$sequence$node, "sequence" = Y$sequence$seq))
-	# I = data.frame("node" = Y$input$node, "sequence" = Y$input$seq)
-	I = as.ten.state.matrix.from.node.seq(data.frame("node" = Y$input$node, "sequence" = Y$input$seq))
+	tree = data.frame("src" = Y$Esrc, "dest" = Y$Edst, "len" = Y$Ew, stringsAsFactors = TRUE);
+	# S = data.frame("node" = Y$sequence$node, "sequence" = Y$sequence$seq, stringsAsFactors = TRUE)
+	S = as.ten.state.matrix.from.node.seq(data.frame("node" = Y$sequence$node, "sequence" = Y$sequence$seq, stringsAsFactors = TRUE))
+	# I = data.frame("node" = Y$input$node, "sequence" = Y$input$seq, stringsAsFactors = TRUE)
+	I = as.ten.state.matrix.from.node.seq(data.frame("node" = Y$input$node, "sequence" = Y$input$seq, stringsAsFactors = TRUE))
 	R = list("input" = I, "sequence" = S, "tree" = tree)
 	
 	if (return.graph) {
@@ -156,15 +156,18 @@ scelestial <- function(seq, mink=3, maxk=3, root.assign.method = c("none", "bala
 			G.dfs = my.dfs(tree, root = root);
 			if (root.assign.method == "balance") {
 				root = names(which.min(G.dfs$balance.depth));
+				if (length(root) != 1) {
+					stop("There are more than one vertex with minimum depth")
+				}
 				G.dfs = my.dfs(tree, root = root);
 			}
 			E.new = do.call(rbind, apply(tree, 1, function(r, G.dfs) {
 						  	# print(r);
 						  	# print(r["src"] %in% names(G.dfs$father));
 						  	if (!r["src"] %in% names(G.dfs$father) || G.dfs$father[[r["src"]]] != r["dest"])
-						  		data.frame(src=r["src"], dest=r["dest"], len=r["len"])
+						  		data.frame(src=r["src"], dest=r["dest"], len=r["len"], stringsAsFactors = TRUE)
 							else
-						  		data.frame(src=r["dest"], dest=r["src"], len=r["len"])
+						  		data.frame(src=r["dest"], dest=r["src"], len=r["len"], stringsAsFactors = TRUE)
 						  }, G.dfs));
 			G = igraph::graph(edges = as.character(as.vector(t(E.new[c("src", "dest")]))), directed = TRUE);
 		}
@@ -172,7 +175,7 @@ scelestial <- function(seq, mink=3, maxk=3, root.assign.method = c("none", "bala
 		igraph::E(G)$weight = tree$len;
 		R[["graph"]] = G;
 	}
-	R;
+	return(R);
 }
 
 #' Synthesize single-cell data through tumor simulation
@@ -312,10 +315,10 @@ synthesis <- function(sample, site, evolution.step,
 					seed);
 	
 	true.clone = X$true.clone;
-	sequence = as.data.frame(X$sequence);
-	true.sequence = as.data.frame(X$true.sequence);
+	sequence = as.data.frame(X$sequence, stringsAsFactors = TRUE);
+	true.sequence = as.data.frame(X$true.sequence, stringsAsFactors = TRUE);
 	row.names(sequence) = row.names(true.sequence) =X$locus.names;
-	true.tree = data.frame("src" = X$true.tree$d, "dest" = X$true.tree$s, "len" = X$true.tree$w);
+	true.tree = data.frame("src" = X$true.tree$d, "dest" = X$true.tree$s, "len" = X$true.tree$w, stringsAsFactors = TRUE);
 	Y = list(
 		"seqeunce" = sequence,
 		"true.sequence" = true.sequence,
@@ -337,7 +340,7 @@ tree.plot <- function(graph, ...) {
 	G <- NULL;
 	if (igraph::is.igraph(graph)) {
 		G <- graph;
-	} else if(igraph::is.igraph(graph[["graph"]])) {
+	} else if(!is.null(graph[["graph"]]) && igraph::is.igraph(graph[["graph"]])) {
 		G <- graph[["graph"]];
 	} else {
 		stop("Unknown input format. Either pass ourput of the scelestial function or an igraph.")
@@ -370,7 +373,8 @@ tree.plot <- function(graph, ...) {
 #' 
 #' @examples 
 #' ## A small 10-state matrix
-#' seq = data.frame("C1" = c("C/C", "C/C"), "C2" = c("A/A", NA), "C3" = c("C/C", "A/A"))
+#' seq = data.frame("C1" = c("C/C", "C/C"), "C2" = c("A/A", NA), 
+#'         "C3" = c("C/C", "A/A"), stringsAsFactors = TRUE)
 #' ## Convert it to mutation matrix
 #' as.mutation.matrix(seq)
 #' #   C1 C2 C3
@@ -390,7 +394,7 @@ as.mutation.matrix <- function(seq) {
 		R.new[R == max.level] = 0
 		R.new[is.na(R)] = 3
 		R.new
-	})));
+	})), stringsAsFactors = TRUE);
 	rownames(X.mutation.matrix) = rownames(seq)
 	colnames(X.mutation.matrix) = colnames(seq)
 	X.mutation.matrix
@@ -413,7 +417,8 @@ as.mutation.matrix <- function(seq) {
 #' 
 #' @examples 
 #' ## A small 0/1/NA mutation matrix
-#' mut = data.frame("C1" = c(0, 0), "C2" = c(0, 3), "C3" = c(1, 0))
+#' mut = data.frame("C1" = c(0, 0), "C2" = c(0, 3), "C3" = c(1, 0), 
+#'         stringsAsFactors = TRUE)
 #' ## Convert it to 10-state matrix
 #' as.ten.state.matrix(mut)
 #' #    C1  C2  C3
@@ -424,7 +429,7 @@ as.ten.state.matrix <- function(mut) {
 	X.new[mut == 0] = "A/A";
 	X.new[mut == 1] = "C/C";
 	X.new[is.na(mut) | mut == 3] = "./.";
-	as.data.frame(X.new)
+	as.data.frame(X.new, stringsAsFactors = TRUE)
 }
 
 #' Generates 10-state sequence matrix from name/10-char string
@@ -458,7 +463,8 @@ as.ten.state.matrix <- function(mut) {
 #' 
 #' @examples 
 #' ## A node sequence data framce
-#' n.seq = data.frame("node" = c("C1", "C2"), "seq" = c("AKLTCXAAC", "AKKOCXAPC"))
+#' n.seq = data.frame("node" = c("C1", "C2"), "seq" = c("AKLTCXAAC", "AKKOCXAPC"), 
+#'           stringsAsFactors = TRUE)
 #' ## Convert it to ten state matrix
 #' as.ten.state.matrix.from.node.seq(n.seq)
 #' #     V1  V2  V3  V4  V5  V6  V7  V8  V9
@@ -553,6 +559,9 @@ my.dfs <- function(graph, root = NULL) {
 		c(as.character(graph[graph["src"] == x, "dest"]), as.character(graph[graph["dest"] == x, "src"]))
 	}, USE.NAMES = TRUE, simplify = FALSE);
 	if (is.null(root)) {
+		if (length(vertices) < 1) {
+			stop("Graph has no vertex")
+		}
 		root = vertices[1];
 	}
 	

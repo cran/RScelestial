@@ -4,8 +4,14 @@
 \alias{scelestial}
 \title{Infer the single-cell phylogenetic tree}
 \usage{
-scelestial(seq, mink = 3, maxk = 3, root.assign.method = c("none",
-  "balance", "fix"), root = NULL, return.graph = FALSE)
+scelestial(
+  seq,
+  mink = 3,
+  maxk = 3,
+  root.assign.method = c("none", "balance", "fix"),
+  root = NULL,
+  return.graph = FALSE
+)
 }
 \arguments{
 \item{seq}{The sequence matrix. Rows represent loci and columns represent samples.

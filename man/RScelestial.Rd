@@ -3,7 +3,6 @@
 \docType{package}
 \name{RScelestial}
 \alias{RScelestial}
-\alias{RScelestial-package}
 \title{RScelestial: An R wrapper for scelestial algorithm for single-cell lineage tree reconstruction
   through an approximation algorithm based on Steiner tree problem}
 \description{

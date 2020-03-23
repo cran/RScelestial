@@ -5,11 +5,21 @@
 \title{Internal function for generating synthetic single-cell
 data through simulation of tumor growth and evolution.}
 \usage{
-.synthesis(sample, site, evolutionSteps, mutationRate = 0.01,
-  advantageIncreaseRatio = 1, advantageDecreaseRatio = 10,
-  advantageKeepRatio = 100, advantageIncreaseStep = 0.01,
-  advantageDecreaseStep = 0.01, mvRate = 0.5, fpRate = 0.2,
-  fnRate = 0.1, seed = -1L)
+.synthesis(
+  sample,
+  site,
+  evolutionSteps,
+  mutationRate = 0.01,
+  advantageIncreaseRatio = 1,
+  advantageDecreaseRatio = 10,
+  advantageKeepRatio = 100,
+  advantageIncreaseStep = 0.01,
+  advantageDecreaseStep = 0.01,
+  mvRate = 0.5,
+  fpRate = 0.2,
+  fnRate = 0.1,
+  seed = -1L
+)
 }
 \arguments{
 \item{sample}{Number of samples}

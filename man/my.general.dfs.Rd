@@ -5,8 +5,16 @@
 \title{Running depth first search on a tree and calling
 functions on entrance/exit events}
 \usage{
-my.general.dfs(nei, v, f, extra, in.call, mid.call.before, mid.call.after,
-  out.call)
+my.general.dfs(
+  nei,
+  v,
+  f,
+  extra,
+  in.call,
+  mid.call.before,
+  mid.call.after,
+  out.call
+)
 }
 \arguments{
 \item{nei}{Neighbor list for each vertex}

@@ -4,11 +4,21 @@
 \alias{synthesis}
 \title{Synthesize single-cell data through tumor simulation}
 \usage{
-synthesis(sample, site, evolution.step, mutation.rate = 1,
-  advantage.increase.ratio = 1, advantage.decrease.ratio = 10,
-  advantage.keep.ratio = 100, advantage.increase.step = 0.01,
-  advantage.decrease.step = 0.01, mv.rate = 0.5, fp.rate = 0.2,
-  fn.rate = 0.1, seed = -1)
+synthesis(
+  sample,
+  site,
+  evolution.step,
+  mutation.rate = 1,
+  advantage.increase.ratio = 1,
+  advantage.decrease.ratio = 10,
+  advantage.keep.ratio = 100,
+  advantage.increase.step = 0.01,
+  advantage.decrease.step = 0.01,
+  mv.rate = 0.5,
+  fp.rate = 0.2,
+  fn.rate = 0.1,
+  seed = -1
+)
 }
 \arguments{
 \item{sample}{Number of samples.}
