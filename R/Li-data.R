@@ -9,7 +9,7 @@
 #' @keywords datasets
 #'
 #' @references Gigascience. 2012 Aug 14;1(1):12. doi: 10.1186/2047-217X-1-12.
-#' (\href{https://www.ncbi.nlm.nih.gov/pubmed/23587365}{PubMed})
+#' (\href{https://pubmed.ncbi.nlm.nih.gov/23587365/}{PubMed})
 #'
 #' @source \href{https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3626503/bin/2047-217X-1-12-S2.xls}{QTL Archive}
 #' 

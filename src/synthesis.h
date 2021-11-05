@@ -12,14 +12,10 @@ std::default_random_engine generator;
 std::uniform_int_distribution<int> uint_dist(0, RAND_MAX);
 
 double doubleRand(double mx) {
-	//OLD RANDOM
-//   return double(rand()) / (double(RAND_MAX) + 1.0) * mx;
    return double(uint_dist(generator)) / (double(RAND_MAX) + 1.0) * mx;
 }
 
 int intRand(int mx) {
-	//OLD RANDOM
-//   return (rand() * 1.0) / (RAND_MAX) * mx;
 	return (uint_dist(generator) * 1.0) / (RAND_MAX) * mx;
 }
 
@@ -28,28 +24,64 @@ const int MAXN = 10000;
 const int MAXLEN = 2000;
 const int MAX_SAMPLE = 1000;
 
-int n;
+size_t n;
 vector<double> adv, advCumSum;
+// parent of a node, distance of node to its parent (not use for it now)
 vector<int> parent, parentDistance;
 vector<vector<int>> sequence;
+// number of children
+vector<size_t> childCount;
 
-//double adv[MAXN], advCumSum[MAXN];
-//int seq[MAXN][MAXLEN];
-//int parent[MAXN], parentDistance[MAXN];
-
-int locusCount, step;
-// , potentialLocusCount;
+size_t locusCount, step;
 double incAdvProb, decAdvProb, keepAdvProb;
 double advIncStep, advDecStep;
 double missingValueRate, zeroToOneRate, oneToZeroRate;
 
 double stepMutationRate;
 
+// when growing the clone tree, only allow nodes with less than treeGrowFilterOutChilderSize to have new child
+int treeGrowFilterOutChilderSize = 0;
+
+enum SamplingMethod {
+    ADVANTAGE, UNIFORM
+};
+std::istream& operator>>(std::istream& in, SamplingMethod& samplingMethod) {
+	string token;
+	in >> token;
+	if (token == "advantange")
+		samplingMethod = SamplingMethod::ADVANTAGE;
+	else if (token == "uniform")
+		samplingMethod = SamplingMethod::UNIFORM;
+	else
+		throw runtime_error("invalid sampling method " + token);
+	return in;
+}
+
+SamplingMethod samplingMethod;
+
+
 int sampleWithAdvantage() {
-	double prolR = doubleRand(advCumSum[n-1]);
-	vector<double>::iterator prolIt = lower_bound(advCumSum.begin(), advCumSum.end(), prolR);
-	int prolIdx = prolIt - advCumSum.begin();
-	return prolIdx;
+	if (treeGrowFilterOutChilderSize == 0) {
+		double prolR = doubleRand(advCumSum[n-1]);
+		vector<double>::iterator prolIt = lower_bound(advCumSum.begin(), advCumSum.end(), prolR);
+		int prolIdx = prolIt - advCumSum.begin();
+		return prolIdx;
+	} else {
+		double advSum = 0;
+		for (size_t i=0; i<parent.size(); i++) {
+			if ((int)childCount[i] < treeGrowFilterOutChilderSize)
+				advSum += adv[i];
+		}
+		double prolR = doubleRand(advSum), advSum2 = 0;
+		for (size_t i=0; i<parent.size(); i++) {
+			if ((int)childCount[i] < treeGrowFilterOutChilderSize) {
+				advSum2 += adv[i];
+				if (advSum2 > prolR)
+					return i;
+			}
+		}
+		return -1;
+	}
 }
 
 void simulate() {
@@ -59,80 +91,55 @@ void simulate() {
 	//init:
 	sequence.clear();
 	sequence.push_back(vector<int>(locusCount, 0));
-	// for (int i=0; i<locusCount; i++)
-	// 	seq.push_back(0);
-		// seq[0][i] = 0;
 	adv.clear();
 	adv.push_back(1);
-	// adv[0] = 1;
 	advCumSum.clear();
 	advCumSum.push_back(adv[0]);
-	// advCumSum[0] = adv[0];
 	parent.clear();
 	parent.push_back(-1);
-	// parent[0] = -1;
 	parentDistance.clear();
 	parentDistance.push_back(0);
+	childCount.clear();
+	childCount.push_back(0);
 	n = 1;
 
 	std::poisson_distribution<int> distribution(stepMutationRate);
 
 	
-	for (int s = 0; s < step; s++) {
-		int prolIdx = sampleWithAdvantage();
-		// cerr << "  s=" << s << " prolIdx=" << prolIdx << endl;
+	for (size_t s = 0; s < step; s++) {
+		size_t prolIdx = sampleWithAdvantage();
 
 		assert(prolIdx < n);
 		assert(0 <= prolIdx);
 
-		// copy(seq[prolIdx], seq[prolIdx] + locusCount, seq[n]);
 		sequence.push_back(sequence[prolIdx]);
-		int cnt = distribution(generator);
-		for (int j=0; j<cnt; j++) {
+		size_t cnt = distribution(generator);
+		for (size_t j=0; j<cnt; j++) {
 			int l = intRand(locusCount);
-			// cerr << "  " << l << " " << locusCount << endl;
 			sequence[n][l] = 1-sequence[n][l];
 		}
 
 		double advR = doubleRand(1);
 		if (advR < incAdvProb) 
 			adv.push_back(adv[prolIdx] * (1 + advIncStep));
-			// adv[n] = adv[prolIdx] * (1 + advIncStep);
 		else if (advR < decAdvProb)
 			adv.push_back(adv[prolIdx] * (1 - advDecStep));
-			// adv[n] = adv[prolIdx] * (1 - advDecStep);
 		else
 			adv.push_back(adv[prolIdx]);
-			// adv[n] = adv[prolIdx];
-		// advCumSum[n] = advCumSum[n-1] + adv[n];
 		advCumSum.push_back(advCumSum[n-1] + adv[n]);
 
-		// parent[n] = prolIdx;
 		parent.push_back(prolIdx);
-		// parentDistance[n] = 1;
 		parentDistance.push_back(1);
+		childCount.push_back(0);
+		childCount[prolIdx] ++;
 		n++;
 	}
 
-	// cerr << "All Sequences: " << endl;
-	// for (int i=0; i<n; i++) {
-	// 	for (int j=0; j<locusCount; j++) {
-	// 		cerr << seq[i][j];
-	// 	}
-	// 	cerr << endl;
-	// }
-
-	// cerr << "Simulation done" << endl;
 }
 
 
 struct Output {
-    int sampleCount;
-	// vector<int> cloneSamples[MAXN];
-	// int sampleClone[MAX_SAMPLE];
-	// int output[MAXLEN][MAX_SAMPLE];
-	// int parentCompressed[MAXN],
-	// 	parentCompressedDistance[MAXN];
+	size_t sampleCount;
 	vector<vector<int>> cloneSamples;
 	vector<int> sampleClone;
 	vector<vector<int>> output;
@@ -140,19 +147,11 @@ struct Output {
 		parentCompressedDistance;
 
 
-    Output(int _sampleCount) : sampleCount(_sampleCount) {
+	Output(size_t _sampleCount) : sampleCount(_sampleCount) {
 		cloneSamples = vector<vector<int>>(n, vector<int>());
-        // for (int i=0; i<n; i++) {
-        //     cloneSamples[i].clear();
-        // }
-
 		parentCompressedDistance = vector<int>(n, -1);
-	// for (int i=0; i<n; i++) {
-	// 	o.parentCompressedDistance[i] = -1;
-	// }
 		parentCompressed = vector<int>(n,-1);
-
-    }
+	}
 
 	void compressParent(int v) {
 		if (parentCompressedDistance[v] != -1)
@@ -175,21 +174,29 @@ struct Output {
 };
 
 
-Output sample(int sampleCount) {
+Output sample(size_t sampleCount) {
 	assert(sampleCount < MAX_SAMPLE);
 
 	Output o(sampleCount);
 
-	for (int i=0; i<sampleCount; i++) {
-		// double prolR = doubleRand(advCumSum[n-1]);
-		// double* prolIt = lower_bound(advCumSum, advCumSum+n, prolR);
-		// int prolIdx = prolIt - advCumSum;
+	if (samplingMethod == SamplingMethod::ADVANTAGE) {
+		for (size_t i=0; i<sampleCount; i++) {
+			int prolIdx = sampleWithAdvantage();
 
-		int prolIdx = sampleWithAdvantage();
-
-		o.cloneSamples[prolIdx].push_back(i);
-		o.sampleClone.push_back(prolIdx);
-		// o.sampleClone[i] = prolIdx;
+			o.cloneSamples[prolIdx].push_back(i);
+			o.sampleClone.push_back(prolIdx);
+		}
+	} else if (samplingMethod == SamplingMethod::UNIFORM) {
+		if (sampleCount != childCount.size()) {
+			cerr << "Warning: Sample count and child count should be equal for this sampling method " << sampleCount << " " << childCount.size() << endl;
+		}
+		for (size_t i=0; i<sampleCount; i++) {
+			int prolIdx = i % childCount.size();
+			o.cloneSamples[prolIdx].push_back(i);
+			o.sampleClone.push_back(prolIdx);
+		}
+	} else {
+		throw runtime_error("Invalid samplingMethod");
 	}
 
 
@@ -197,8 +204,8 @@ Output sample(int sampleCount) {
 
 	o.output = vector<vector<int>>(locusCount, vector<int>(sampleCount, -1));
 
-	for (int i=0; i<sampleCount; i++) {
-		for (int j=0; j<locusCount; j++) {
+	for (size_t i=0; i<sampleCount; i++) {
+		for (size_t j=0; j<locusCount; j++) {
 			int v = 3;
 			if (distribution(generator) < missingValueRate) {
 				v = 3;
@@ -217,7 +224,7 @@ Output sample(int sampleCount) {
 		}
 	}
 
-	for (int i=0; i<n; i++) {
+	for (size_t i=0; i<n; i++) {
 		o.compressParent(i);
 	}
 	return o;
@@ -226,7 +233,7 @@ Output sample(int sampleCount) {
 void printSample(const Output& o, string cloneFileName, string seqFileName, string treeFileName, string trueSeqFileName) {
 
 	ofstream fclone(cloneFileName);
-	for (int i=0; i<n; i++) {
+	for (size_t i=0; i<n; i++) {
 		fclone << i << " ";
 		for (auto j: o.cloneSamples[i]) {
 			fclone << j+1 << " ";
@@ -235,30 +242,29 @@ void printSample(const Output& o, string cloneFileName, string seqFileName, stri
 	}
 
 	ofstream fseq(seqFileName);
-	for (int j=0; j<locusCount; j++) {
-		for (int i=0; i<o.sampleCount; i++) {
+	for (size_t j=0; j<locusCount; j++) {
+		for (size_t i=0; i<o.sampleCount; i++) {
 			fseq << o.output[j][i] << " ";
 		}
 		fseq << endl;
 	}
 
 	ofstream ftree(treeFileName);
-	for (int i=0; i<n; i++) {
+	for (size_t i=0; i<n; i++) {
 		if (parent[i] == -1 || o.cloneSamples[i].size() > 0)
 			ftree << i << " ";
 	}
 
 	ftree << endl;
-	for (int i=0; i<n; i++) {
+	for (size_t i=0; i<n; i++) {
 		if (parent[i] != -1 && o.cloneSamples[i].size() > 0)
 			ftree << i << "->" << o.parentCompressed[i] << " " << o.parentCompressedDistance[i] << endl;
-		// cerr << i << " " << parent[i] << " " << adv[i] << " " << advCumSum[i] << endl;
 	}
 
 	if (trueSeqFileName != "") {
 		ofstream fseq(trueSeqFileName);
-		for (int j=0; j<locusCount; j++) {
-			for (int i=0; i<o.sampleCount; i++) {
+		for (size_t j=0; j<locusCount; j++) {
+			for (size_t i=0; i<o.sampleCount; i++) {
 				fseq << sequence[o.sampleClone[i]][j] << " ";
 			}
 			fseq << endl;
@@ -269,4 +275,5 @@ void printSample(const Output& o, string cloneFileName, string seqFileName, stri
 
 
 }
+
 

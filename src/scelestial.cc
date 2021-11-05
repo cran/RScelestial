@@ -1,5 +1,7 @@
 #include <Rcpp.h>
 #define logger Rcpp::Rcerr
+#define cerr Rcpp::Rcerr
+#define SMALL_STACK_CONFIG
 #include "scelestial.h"
 #include "synthesis.h"
 using namespace Rcpp;
@@ -46,10 +48,6 @@ void load(UniverseVertexSet& universeVertexSet, DataFrame data) {
 	for (int i=0; i<data.cols(); i++) {
 		// cerr << "  iterate col=" << i << endl;
 		IntegerVector col = data[i];
-		std::string colClass = col.attr("class");
-		if (colClass != std::string("factor")) {
-			stop("columns of dataframe should have factor type");
-		}
 		// cerr << "  iterate col=" << i << " " << col << endl;
 		CharacterVector levels = col.attr("levels");
 		// cerr << "levels: " << levels << endl;
@@ -315,7 +313,7 @@ List _synthesis(int sample, int site, int evolutionSteps,
 	// TrueSeq
 
 	CharacterVector locusNames;
-	for (int j=0; j<synth::locusCount; j++) {
+	for (size_t j=0; j<synth::locusCount; j++) {
 		locusNames.push_back(string("L") + to_string(j+1));
 	}
 
@@ -323,9 +321,9 @@ List _synthesis(int sample, int site, int evolutionSteps,
 		Rcerr << "synthesis C++ locus names created" << endl;
 
 	List sequences;
-	for (int i=0; i<o.sampleCount; i++) {
+	for (size_t i=0; i<o.sampleCount; i++) {
 		NumericVector nv;
-		for (int j=0; j<synth::locusCount; j++) {
+		for (size_t j=0; j<synth::locusCount; j++) {
 			nv.push_back(o.output[j][i]);
 		}
 		sequences.push_back(nv, string("C") + to_string(i+1));
@@ -336,9 +334,9 @@ List _synthesis(int sample, int site, int evolutionSteps,
 		Rcerr << "synthesis C++ sequences created" << endl;
 
 	List trueSequences;
-	for (int i=0; i<o.sampleCount; i++) {
+	for (size_t i=0; i<o.sampleCount; i++) {
 		NumericVector nv;
-		for (int j=0; j<synth::locusCount; j++) {
+		for (size_t j=0; j<synth::locusCount; j++) {
 			nv.push_back(synth::sequence[o.sampleClone[i]][j]);
 		}
 		trueSequences.push_back(nv, string("C") + to_string(i+1));
@@ -349,7 +347,7 @@ List _synthesis(int sample, int site, int evolutionSteps,
 		Rcerr << "synthesis C++ true sequences created" << endl;
 
 	List clones;
-	for (int i=0; i<synth::n; i++) {
+	for (size_t i=0; i<synth::n; i++) {
 		vector<string> oneClone;
 		for (auto j: o.cloneSamples[i]) {
 			oneClone.push_back(string("C") + to_string(j+1));
@@ -373,7 +371,7 @@ List _synthesis(int sample, int site, int evolutionSteps,
 		// 		treeNodes.push_back(i+1);
 		// }
 
-		for (int i=0; i<synth::n; i++) {
+		for (size_t i=0; i<synth::n; i++) {
 			if (synth::parent[i] != -1 && o.cloneSamples[i].size() > 0) {
 				treeEdgeDst.push_back("N" + to_string(i+1));
 				treeEdgeSrc.push_back("N" + to_string(o.parentCompressed[i]+1));

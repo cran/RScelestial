@@ -6,9 +6,6 @@
 #include <set>
 #include <iterator>
 #include <algorithm>
-//#include <boost/range/adaptor/map.hpp>
-//#include <boost/range/algorithm/copy.hpp>
-//#include <boost/assign.hpp>
 #include <cassert>
 #include <cmath>
 #include <chrono>
@@ -39,9 +36,6 @@ class ExitException: public std::exception {
 	private:
 	string reason;
 };
-
-// #define USE_HAMILTONIAN_PATH_LOWER_BOUND_FOR_SMALL_STEINER_TREES_PROUNING
-// #define DP_DOUBLE_TO_INT_APPROX // It has some BUGS!! Do not use it!
 
 template<typename T, typename C>
 ostream& operator<<(ostream& os, const set<T, C>& c) {
@@ -78,7 +72,16 @@ enum debug_option
     DEBUG_ENABLE,
     DEBUG_ENABLE_V
 };
-debug_option logLevel = DEBUG_DISABLE;
+#ifdef DEBUG_LEVEL_1
+	debug_option logLevel = DEBUG_ENABLE;
+	#define IFDEBUG(A) {if(logLevel > 0) { logger << A << endl; }}
+#elif  DEBUG_LEVEL_2
+	debug_option logLevel = DEBUG_ENABLE_V;
+	#define IFDEBUG(A) {if(logLevel > 0) { logger << A << endl; }}
+#else
+	debug_option logLevel = DEBUG_DISABLE;
+	#define IFDEBUG(A) {}
+#endif
 using std::endl;
 
 const int MAXTREELEAFS = 10;
@@ -102,7 +105,6 @@ string allelCoding[][2] = {
 						{"X","./."}};
 map<string, char> allelCodingMap;
 map<char,int> allelCoding2Int;
-// map<int, char> int2AllelCoding;
 char int2AllelCoding[allelCodingSize];
 int xCode;
 void init() {
@@ -112,17 +114,12 @@ void init() {
 		allelCodingMap[r] = allelCoding[i][0][0];
 	}
 
-	// int j = 0;
 	for (int i=0; i<allelCodingSize; i++) {
 		allelCoding2Int[allelCoding[i][0][0]] = i;
 		int2AllelCoding[i] = allelCoding[i][0][0];
 	}
 
 	xCode = allelCoding2Int['X'];
-
-	// logger << "Allel: " << allelCoding2Int << "\n" << int2AllelCoding << endl
-	//     << allelCoding2Int << endl
-	//     << int2AllelCoding << endl;
 }
 
 char allelCode(string allel) {
@@ -146,44 +143,25 @@ long long power(int a, int b, int mod) {
 }
 
 const double IMPUTATION_COST = 0.50001;
-const double IMPUTATION_X_X_FACTOR = 2 * IMPUTATION_COST;
+//const double IMPUTATION_X_X_FACTOR = 2 * IMPUTATION_COST;
+const double IMPUTATION_X_X_FACTOR = IMPUTATION_COST;
 const int MAX_SEQUENCE = 1000;
 int kRestrictionSteinerTreeMax = 4, kRestrictionSteinerTreeMin = 3;
 // We know that MST/2 < Stiener-tree, thus by setting this to 0.5, this is only a valid bound,
 // If we let this value to be more than 0.5, we may miss some subsets, but the algorithm would finish faster. 
 double steinerTreeMSTLowerBoundRate = 0.5;
 
-#if !defined(IMPUT_COST_2) && !defined(IMPUT_COST_3)
 inline double charDistance(char a, char b) {
 	if (a == 'X' && b == 'X')
 		return IMPUTATION_X_X_FACTOR * IMPUTATION_COST;
 	else
 		return (a=='X' || b=='X') ? IMPUTATION_COST : a == b ? 0 : 1;
 }
-#endif
-#ifdef IMPUT_COST_2
-inline double charDistance(char a, char b) {
-	if (a == 'X' && b == 'X')
-		return 0;
-	else
-		return (a=='X' || b=='X') ? IMPUTATION_COST : a == b ? 0 : 1;
-}
-#endif
-#ifdef IMPUT_COST_3
-inline double charDistance(char a, char b) {
-	if (a == 'X' && b == 'X')
-		return IMPUTATION_COST + 0.00001;
-	else
-		return (a=='X' || b=='X') ? IMPUTATION_COST : a == b ? 0 : 1;
-}
-#endif
 
 struct Cell {
 	vector<char> s;
-	// vector<int> sIndex;
 
 	Cell() {
-		// hashValue = 0;
 	}
 
 	int size() const {
@@ -191,30 +169,17 @@ struct Cell {
 	}
 
 	void load(string str) {
-		// hashValue = 0;
 		s.clear();
 		for (auto& c: str)
 			append(c);
 	}
 
 	void append(char a) {
-		// hashValue = (hashValue + allelCoding2Int[a] * power(hashP, s.size(), hashM)) % hashM;
-		// if (hashValue < 0) {
-		//     logger << "OH!!!" << " " << hashValue << " " << power(hashP, s.size(), hashM) << " " 
-		//         << allelCoding2Int[a] * power(hashP, s.size(), hashM) << endl;
-		// }
-		// assert(hashValue >= 0);
 		s.push_back(a);
-		// sIndex.push_back(allelCoding2Int[a]);
 	}
 
 	void set(char a, int pos) {
-		// hashValue = (hashValue + 
-		//             power(hashP, pos, hashM) * 
-		//                 (allelCoding2Int[a] - allelCoding2Int[s[pos]]) 
-		//             + 100 * hashM) % hashM;
 		s[pos] = a;
-		// sIndex[pos] = allelCoding2Int[a];
 	}
 
 	char get(int pos) const {
@@ -225,82 +190,25 @@ struct Cell {
 		double cnt = 0;
 		for (int i=0; i<(int)s.size(); i++) {
 			cnt += charDistance(s[i], c.s[i]);
-			// if (s[i] == 'X' && c.s[i] == 'X')
-			//     cnt += 100 * IMPUTATION_COST; //DEBUG
-			// else
-			//     cnt += (s[i] == c.s[i]) ? 0 : ((s[i] == 'X' || c.s[i] == 'X') ? IMPUTATION_COST : s[i] != c.s[i]);
 		}
 		return cnt;
 	}
 
 	string toString() const {
 		string r(s.begin(), s.end());
-		// return r + ":" + to_string(hashValue);
 		return r;
 	}
 
-	// static const int hashP;
-	// static const int hashM;
-	
-	// int hashValue;
-
-	// int hash() const {
-	//     return hashValue;
-	// }
-
 };
 
-// const int Cell::hashP = 1610612741L; 
-// const int Cell::hashM = 1000000000 + 9;
 
 ostream& operator<<(ostream& os, const Cell& s) {
-	// return os << s.toString() << " " << s.s.size() << endl;
 	return os << s.toString();
 }
 
-// template<typename T>
-// struct DisjointSet {
-//     mutable map<T, T> parent;
-
-//     DisjointSet() {}
-
-//     template<typename It>
-//     DisjointSet(It begin, It end) {
-//         for (It i = begin; i != end; i++) {
-//             parent[*i] = *i;
-//         }
-//     }
-
-//     void add(const T& t) {
-//         parent[t] = t;
-//     }
-
-//     T parentStar(const T& t) const {
-//         if (parent[t] == t)
-//             return t;
-//         return parent[t] = parentStar(parent[t]);
-//     }
-
-//     void join(const T& a, const T& b) {
-//         parent[parentStar(a)] = parent[parentStar(b)];
-//     }
-
-//     bool isJoint(const T& a, const T& b) const {
-//         return parentStar(a) == parentStar(b);
-//     }
-// };
-// template<typename T>
-// ostream& operator<<(ostream& os, const DisjointSet<T>& ds) {
-//     os << "{";
-//     for (auto i: ds.parent) {
-//         os << i.first << ":" << i.second << " ";
-//     }
-//     return os << "}";
-// }
 
 
 struct DisjointSetArray {
-	// mutable int parent[MAX_SEQUENCE];
 	mutable vector<int> parent;
 
 	DisjointSetArray() : parent(MAX_SEQUENCE) {
@@ -395,7 +303,6 @@ struct GenerateAllTrees {
 
 	int treeRepresentationAppend(string s) {
 		int l = treeRepresentationEnd;
-		// strcpy(treeRepresentation + treeRepresentationEnd, s.c_str());
 		for (int i=0, j=treeRepresentationEnd; i< (int)s.length(); i++, j++) {
 			treeRepresentation[j] = s[i];
 		}
@@ -454,14 +361,8 @@ struct GenerateAllTrees {
 		if (availableLeafs.size() == 0) {
 			//Tree is ready
 			if (!unRooted || childs[0].size() >= 3) {
-				// std::cout << treeRepresentation << endl;
 				trees.push_back(treeRepresentation);
 				outChilds.push_back(childs);
-				// logger << "  ";
-				// for (auto v: childs) {
-				//     logger << v << " /";
-				// }
-				// logger << endl;
 			}
 		} else if (availableLeafs.back().size() == 0) {
 			//we return to a node, all its available childs are already handled.
@@ -518,8 +419,6 @@ ostream& operator<<(ostream& os, const GenerateAllTrees& a) {
 	os << tab << "  T:   " << a.treeRepresentation << endl;
 	return os;
 }
-
-//TODO: make a tree struct, instead of vector<vector<int>>
 
 struct UniverseVertexSet {
 
@@ -603,10 +502,6 @@ ostream& operator<<(ostream& os, const EdgeWeight& e) {
 	return os << "(" << e.v << " " << e.u << " " << e.w << ")";
 }
 
-#ifndef DP_DOUBLE_TO_INT_APPROX
-#else
-const int DOUBLE_COST_TO_COST_APPROX_FACTOR = 1000;
-#endif
 
 /**
  */ 
@@ -615,19 +510,22 @@ tuple<vector<EdgeWeight>, double> imputeTree(
 		const vector<vector<int>>& tree, 
 		UniverseVertexSet& universeVertexSet, 
 		bool onlyCost) {
+	IFDEBUG("imputeTree called ...")
 	int len = universeVertexSet.length();
 
 	double finalCost = 0;
 	vector<vector<int>> imputedTree(tree.size(), vector<int>(len, -1));
 
+	IFDEBUG("imputeTree started ...")
+
 	for (int l=0; l<len; l++) {
-		#ifndef DP_DOUBLE_TO_INT_APPROX
-		// HADI APPROX: 
+#ifdef SMALL_STACK_CONFIG
+		vector<vector<double>> cost(MAXNODE, vector<double>(allelCodingSize, 0));
+		vector<vector<vector<int>>> path(MAXNODE, vector<vector<int>>(allelCodingSize, vector<int>(MAXNODE, 0)));
+#else
 		double cost[MAXNODE][allelCodingSize];
-		#else
-		long long cost[MAXNODE][allelCodingSize];
-		#endif
 		int path[MAXNODE][allelCodingSize][MAXNODE];
+#endif
 		for (int v=(int)(tree.size())-1; v>=0; v--) {
 			for (int a = 0; a<allelCodingSize; a++) {
 				if (tree[v].size() == 1) {
@@ -635,20 +533,12 @@ tuple<vector<EdgeWeight>, double> imputeTree(
 					int c = tree[v][0];
 					const Cell& leaf = universeVertexSet.getVertex(leaves[c]);
 
-					#ifndef DP_DOUBLE_TO_INT_APPROX
 					// HADI APPROX: 
 					cost[v][a] = charDistance(leaf.s[l], int2AllelCoding[a]);
-					#else
-					cost[v][a] = (long long)(DOUBLE_COST_TO_COST_APPROX_FACTOR * charDistance(leaf.s[l], int2AllelCoding[a]));
-					#endif
 					// (leaf.sIndex[l] == a) ? 0 : ((leaf.s[l] == 'X') ? IMPUTATION_COST : 100000);
 				} else {
-					#ifndef DP_DOUBLE_TO_INT_APPROX
 					// HADI APPROX: 
 					double cstSum = 0;
-					#else
-					long long cstSum = 0;
-					#endif
 					for (auto c: tree[v]) {
 						#ifndef DP_DOUBLE_TO_INT_APPROX
 						// HADI APPROX: 
@@ -669,16 +559,6 @@ tuple<vector<EdgeWeight>, double> imputeTree(
 			}
 		}
 
-		// logger << "IMP: " << l << endl;
-		// for (int v=0; v<tree.size(); v++) {
-		//     logger << " " << v << ": ";
-		//     for (int a = 0; a<allelCodingSize; a++) {
-		//         logger << cost[v][a] << " ";
-		//     }
-		//     logger << endl;
-		// }
-
-
 		int minA = -1;
 		for (int a=0; a<allelCodingSize; a++) {
 			if (a != xCode && (minA == -1 || cost[0][a] < cost[0][minA]))
@@ -686,55 +566,36 @@ tuple<vector<EdgeWeight>, double> imputeTree(
 		}
 
 		// HADI APPROX: 
-		#ifndef DP_DOUBLE_TO_INT_APPROX
 		finalCost += cost[0][minA];
-		#else
-		finalCost += cost[0][minA] * 1.0 / DOUBLE_COST_TO_COST_APPROX_FACTOR;
-		#endif
-
-		// logger << "  Path: ";
 
 		if (!onlyCost) {
 			vector<int> minAs(tree.size(), -1);
 			minAs[0] = minA;
 			for (int v=0; v<(int)tree.size(); v++) {
-				// logger << v << ":" << minAs[v] << "/ ";
 				imputedTree[v][l] = minAs[v];
 				if (tree[v].size() == 1) {
-					// imputed[tree[v][0]][l] = minAs[v];
 				} else {
 					for (auto c: tree[v]) {
-						// int cst = cost[c][minAs[v]],
-						//     cstA = minAs[v];
-						// for (int aa=0; aa<allelCodingSize; aa++)
-						//     if (aa != xCode && cst > cost[c][aa]+1) {
-						//         cst = cost[c][aa]+1;
-						//         cstA = aa;
-						//     }
-						// minAs[c] = cstA;
 						minAs[c] = path[v][minAs[v]][c];
 					}
 				}
 			}
-			// logger << endl;
 		}
 
 	}
 	// return imputedTree;
+	
+	IFDEBUG("imputed tree cost calculated")
 
 
 	if (!onlyCost) {
-		// logger << "Generating graph ..." << endl;
 		vector<EdgeWeight> gEdges;
 		vector<int> treeNode2UniverseIndex(tree.size(), -1);
 		for (int v=(int)(imputedTree.size())-1; v>=0; v--) {
-			// logger << "  " << v << ": ";
 			Cell c;
 			for (auto loc : imputedTree[v]) {
 				c.append(int2AllelCoding[loc]);
-				// logger << loc << " " << int2AllelCoding[loc] << " ";
 			}
-			// logger << endl;
 			int h = universeVertexSet.add(c);
 			treeNode2UniverseIndex[v] = h;
 
@@ -743,7 +604,6 @@ tuple<vector<EdgeWeight>, double> imputeTree(
 				gEdges.push_back(EdgeWeight(
 						leafIndex, h, 
 						universeVertexSet.distance(leafIndex, h)));
-					// logger << "      +ge " << h << " " << leafIndex << endl;
 			} else {
 				for (auto u : tree[v]) {
 					int uIndex = treeNode2UniverseIndex[u];
@@ -751,28 +611,12 @@ tuple<vector<EdgeWeight>, double> imputeTree(
 						h, uIndex,
 						universeVertexSet.distance(h, uIndex)
 					));
-					// logger << "      +ge " << h << " " << uIndex << endl;
 				}
 			}
 		}
-		// logger << "TREE: " << endl;
-		// for (int i=0; i<tree.size(); i++) {
-		//     logger  << " " << i << ":" << tree[i];
-		// //     if (tree[i].size() == 1)
-		// //         logger << "[" << cells[tree[i][0]] << "]" ;
-		// //     logger
-		// //         << " -> ";
-		// //     for (auto a: imputedTree[i])
-		// //         logger << int2AllelCoding[a] << " ";
-		//     // logger << endl;
-		// logger << g << endl;
-		// }
-
-		// return make_tuple(g, gNodeCells, finalCost);
 		return make_tuple(gEdges, finalCost);
 	}
 	return make_tuple(vector<EdgeWeight>(), finalCost);
-	// return make_tuple(Graph(), map<int, Cell>(), finalCost);
 }
 
 tuple<vector<EdgeWeight>, double> imputeTree(
@@ -786,20 +630,12 @@ double imputeTreeCost(
 		const vector<int>& leaves, 
 		const vector<vector<int>>& tree, 
 		UniverseVertexSet& universeVertexSet) {
-	return get<1>(imputeTree(leaves, tree, universeVertexSet, true));
+	IFDEBUG("imputeTreeCost called")
+	//return get<1>(imputeTree(leaves, tree, universeVertexSet, true));
+	tuple<vector<EdgeWeight>, double> r = imputeTree(leaves, tree, universeVertexSet, true);
+	return std::get<1>(r);
 }
 
-// vector<int> pickSomeNumbers(int n, int k) {
-// 	set<int> r;
-// 	for (int i=0; i<k; i++) {
-// 		int x = rand() % n;
-// 		for (; r.find(x) != r.end(); ) 
-// 			x = rand() % n;
-// 		r.insert(x);
-// 	}
-// 	// logger << "picked " << n << " " << k << " // " << r << endl;
-// 	return vector<int>(r.begin(), r.end());
-// }
 
 template<typename T>
 struct SubsetIterator {
@@ -857,23 +693,6 @@ struct SubsetIterator {
 	}
 };
 
-// bool nextChoose(vector<int>& l, int n, int k) {
-//     for (int nn=n; l.size() > 0 && l.back() == nn-1; ) {
-//         l.pop_back();
-//         nn--;
-//     }
-//     if (l.size() == 0)
-//         return false;
-//     l.back()++;
-//     while (l.size() < k)
-//         l.push_back(l.back()+1);
-//     return true;
-// }
-
-// bool isValidChoose(vector<int>& l, int n, int k) {
-//     return l.size() > 0;
-// }
-
 double treeCost(const vector<EdgeWeight>& edges, UniverseVertexSet& universeVertexSet) {
 	double cst = 0;
 	for (auto e: edges) {
@@ -903,19 +722,11 @@ bool includesInSet(const vector<T>& A, const set<T, C>& B) {
 template<typename T, typename C>
 void subtractEq(set<T, C>& A, const vector<T>& B) {
 	for (auto i: B) {
-		// HADI: I commented following lines from previous version, is it correct?!
-		// if (A.find(i) == A.end()) {
-		//     // logger << "  " << A << " in " << i << endl;
-		// }
-		// assert(A.find(i) != A.end());
 		if (A.find(i) != A.end())
 			A.erase(A.find(i));
 	}
 }
 
-// template<typename V, typename T>
-// void add_to_container(V& container, const T& element) {
-// }
 
 template<typename T>
 void add_to_container(vector<T>& container, const T& element) {
@@ -962,7 +773,6 @@ double mstEq(V& M) {
 			ds.join(e.v, e.u);
 			add_to_container(R, e);
 			cost += e.w;
-			// R.insert(e);
 		}
 	}
 	M = R;
@@ -1005,23 +815,30 @@ vector<tuple<vector<vector<int>>, vector<EdgeWeight>, vector<EdgeWeight>, vector
 
 	for (int k = minkk; k<=kk; k++) {
 
+		if (logLevel > 0) {
+			logger << "Generating all trees " << k << " ..." << endl;
+		}
 		GenerateAllTrees alg(k);
+		if (logLevel > 0) {
+			logger << "Generating all trees " << k << " created" << endl;
+		}
 		vector<vector<vector<int>>> trees = alg.run();
+		if (logLevel > 0) {
+			logger << "Generating all trees executed" << endl;
+		}
 
 		//fill candidateStack
 		SubsetIterator<int> choose(n, k, input);
+		IFDEBUG("choose created")
 
 
-		// vector<int> l;
-		// for (int i=0; i<k; i++)
-		//     l.push_back(i);
-		// for (int tt=0; isValidChoose(l, n, k); tt++, nextChoose(l, n, k)) {
 		for (int tt=0; choose.isValid(); tt++, choose.next()) {
 
 
 			if (logLevel > 0) {
 				stepsPassed++;
 				if (stepsPassed % 1000 == 0) {
+				//if (stepsPassed % 1 == 0) {
 					auto end = std::chrono::steady_clock::now();
 
 					//Following is too time consuming, 
@@ -1037,21 +854,17 @@ vector<tuple<vector<vector<int>>, vector<EdgeWeight>, vector<EdgeWeight>, vector
 				}
 			}
 
-			// vector<int> li; // index of vertices
-			// for (auto i: l){
-			//     li.push_back(input[i]);
-			// }
 			vector<int> li = choose.get();
-			// // logger << /*"l=" << l <<*/ " li=" << li << endl;
 
 			sort(T.begin(), T.end());
+			IFDEBUG("Edges sorted " << T.size())
 			/**
 			 * terminalTreeDiscardingEdges = bridges
 			 */ 
+
 			vector<EdgeWeight> terminalTreeRemainingEdges, terminalTreeDiscardingEdges;
 			double bridgeCost = 0; // the cost of separating l from each other in T
 			{
-				// logger << "calculating remaining edges ... lc=" << li << endl;
 				DisjointSetArray ds;
 				for (auto n : input) {
 					ds.add(n);
@@ -1059,103 +872,43 @@ vector<tuple<vector<vector<int>>, vector<EdgeWeight>, vector<EdgeWeight>, vector
 				for (int i=0; i+1<(int)li.size(); i++) {
 					ds.join(li[i], li[i+1]);
 				}
+				IFDEBUG("ds joins done")
 
-				// logger << "  T: " << T << endl;
 				for (auto &e: T) {
 					if (!ds.isJoint(e.v, e.u)) {
 						ds.join(e.v, e.u);
 						terminalTreeRemainingEdges.push_back(e);
-						// logger << "    keep " << e << endl;
 					} else {
-						//this should be heaviest edge between two vertices of l
-						// logger << "    bridge: " << e << endl;
 						terminalTreeDiscardingEdges.push_back(e);
 						bridgeCost += e.w;
 					}
 				}
-				// logger << "  " << "cost: " << bridgeCost << " " << minC << " rem: " << terminalTreeRemainingEdges <<  " discard: " << terminalTreeDiscardingEdges << endl;
+				IFDEBUG("edges joined")
 			}
 
-#ifdef USE_HAMILTONIAN_PATH_LOWER_BOUND_FOR_SMALL_STEINER_TREES_PROUNING
-			double aLowerBoundForMinC = 0;
-			{
-				vector<EdgeWeight> clique;
-				for (auto v: li) {
-					for (auto u: li) 
-						if (v < u) {
-							clique.push_back(EdgeWeight(v, u, universeVertexSet.inputSequencesDistance(v, u)));
-						}
-				}
-				mstEq(clique);
-				double mstCost = 0;
-				for (auto e: clique) {
-					mstCost += e.w;
-				}
-				// aLowerBoundForMinC = mstCost/2;
-				aLowerBoundForMinC = mstCost * steinerTreeMSTLowerBoundRate;
-			}
-			// in the following case, we know bridgeCost <= aLowerBoundForMinC <= minC,
-			// thus, gain - bridgeCost - minC <= 0, which cause the l to not be selected,
-			// thus, with this prouning we ignore calculation of the dynamic programming.
-			if (bridgeCost <= aLowerBoundForMinC) {
-
-				// vector<vector<int>> minT;
-				// double minC = 1000000000;
-				// for (auto tree : trees) {
-				// 	double c = imputeTreeCost(li, tree, universeVertexSet);
-				// 	if (c < minC) {
-				// 		minC = c;
-				// 		minT = tree;
-				// 	}
-				// }
-				// if (aLowerBoundForMinC > minC) {
-				// 	logger << "!!lb bc=" << bridgeCost << " lb=" << aLowerBoundForMinC << " " << minC << endl;
-				// 	logger << "     list ";
-				// 	int lastV = li.back();
-				// 	for (auto v: li) {
-				// 		logger <<  v << " " << universeVertexSet.inputSequencesDistance(v, lastV) << ":" << universeVertexSet.getVertex(v) << " ";
-				// 		lastV = v;
-				// 	}
-				// 	logger << endl;
-
-				// 	tuple<vector<EdgeWeight>, double> t = imputeTree(li, minT, universeVertexSet);
-
-				// 	logger << "  tree = " << minT << " imp = " << get<0>(t) << " " << get<1>(t) << endl;
-				// }
-				// assert(aLowerBoundForMinC <= minC);
-				// // logger << "lbd ";
-				stepsLBDd++;
-
-				continue;
-			}
-#endif
+			IFDEBUG("Choose done")
 
 			double minC = 1000000000;
+			IFDEBUG("calculating minC " << minC << "minT ...")
 			vector<vector<int>> minT;
+			IFDEBUG("calculating minC " << minC << "minT (2) ...")
 
-			for (auto tree : trees) {
+			for (vector<vector<int>> &tree : trees) {
+			//for (auto &tree : trees) {
+				IFDEBUG("impute tree " << tree << " ... ")
 				double c = imputeTreeCost(li, tree, universeVertexSet);
+				IFDEBUG("impute tree " << tree << " done ")
 				if (c < minC) {
 					minC = c;
 					minT = tree;
 				}
 			}
+			IFDEBUG("minC " << minC << "minT found")
 
-			// logger << "  imputed." << endl;
-
-			// logger << "    minT: " << minT << " cost: " << minC << endl;
-			// assert(minC == get<2>(t));
 			{
 
 				double gain = bridgeCost - minC;
-				// logger << "  gain = " << gain << endl;
 				if (gain > EPSILON) {
-					// logger << "lc=" << li << " bridge: " << bridgeCost << " c: " << minC << endl;
-					// logger << "  rem: " << terminalTreeRemainingEdges << " disc: " << terminalTreeDiscardingEdges << endl;
-					// logger << "  g: " << g << endl;
-					// logger << "    nodeCells: " << nodeCells << endl;
-					// logger << "    lc: " << lc << endl;
-					// logger << "    tau edges : " << edges << endl;
 					DisjointSetArray ds, ds2;
 					for (auto n : input) {
 						ds.add(n);
@@ -1163,29 +916,22 @@ vector<tuple<vector<vector<int>>, vector<EdgeWeight>, vector<EdgeWeight>, vector
 					}
 					for (int i=0; i+1<(int)li.size(); i++) {
 						ds.join(li[i], li[i+1]);
-						// logger << "    join tau: " << li[i] << " " << li[i+1] << endl;
 					}
 
 					for (auto &e: T) {
 						if (!ds.isJoint(e.v, e.u)) {
 							ds.join(e.v, e.u);
 							ds2.join(e.v, e.u);
-							// logger << "    join " << e.v << " " << e.u << endl;
 						} else {
-							// logger << "    join! " << e.v << " " << e.u << endl;
 						}
 					}
-
-					// logger << "    ds: " << ds << " ds2: " << ds2 << endl;
 
 					//returns terminal of a component
 					map<int, int> dsRoot2TerminalMap;
 					for (auto t : li) {
-						// logger << "      root: " << *h2VertexMap[t.hash()] << " " << *h2VertexMap[ds2.parentStar(t.hash())] << " " << endl;
 						dsRoot2TerminalMap[ds2.parentStar(t)] = t;
 					}
 
-					// logger << "    dsRoot2TerminalMap: " << dsRoot2TerminalMap << endl;
 					vector<EdgeWeight> terminalNewEdges;
 					for (auto e: terminalTreeDiscardingEdges) {
 						if (ds2.isJoint(e.v, e.u)) {
@@ -1198,14 +944,10 @@ vector<tuple<vector<vector<int>>, vector<EdgeWeight>, vector<EdgeWeight>, vector
 
 						int t1 = dsRoot2TerminalMap[ds2.parentStar(e.v)],
 							t2 = dsRoot2TerminalMap[ds2.parentStar(e.u)];
-						// logger << "    terminals: " << e.c1 << "," << e.c2 << " " << t1 << "," << t2 << " / " << ds2.parentStar(e.c1) << " " << ds2.parentStar(e.c2) << endl;
-						// logger << "    terminals: " << *h2VertexMap[e.c1] << "," << *h2VertexMap[e.c2] << " " << *h2VertexMap[t1] << "," << *h2VertexMap[t2] << endl;
 
 						//We can keep the track of the tree here too!
 						EdgeWeight ne = EdgeWeight(t1, t2, e.w - gain);
 						terminalNewEdges.push_back(ne);
-
-						// logger << "    ne: " << ne << endl;
 					}
 
 					// A good thing to see on logger
@@ -1229,21 +971,11 @@ vector<tuple<vector<vector<int>>, vector<EdgeWeight>, vector<EdgeWeight>, vector
 
 					assert((int)T.size() == n-1);
 
-					// logger << "  T: " << T << " disc: " << terminalTreeDiscardingEdges << " new: " << terminalNewEdges << endl;
-
-					// auto actualTree = actualTreeOfTerminalCollapsedTree(input, T);
-
-					// logger << "  " << "cost: " << bridgeCost << " " << minC << 
-					//     // " rem: " << terminalTreeRemainingEdges <<  
-					//     " newCost: " << get<2>(actualTree) << 
-					//     endl;
 
 				} 
 			}
+			IFDEBUG("gain calculated")
 
-			// logger << "Updated " << t << " " << minC << " " << t1.w() ;
-			// logger << " : [" << l << "] G:" << g << " T1:" << t1;
-			// logger << endl;
 		}
 			
 	}
@@ -1268,13 +1000,9 @@ tuple<vector<EdgeWeight>, double> bermenApplyCandidateTrees(UniverseVertexSet& u
 	vector<EdgeWeight> gEdges;
 	double cost = 0;
 
-//check candidateStack
+	//check candidateStack
 	//and apply candidateStack
 	{
-		// logger << "Applying candidate Stack" << endl;
-		// logger << "  M: " << T << endl;
-
-		// map<int, Cell> gMap;
 		DisjointSetArray ds;
 
 		set<EdgeWeight> E = set<EdgeWeight>(T.begin(), T.end()),
@@ -1285,8 +1013,6 @@ tuple<vector<EdgeWeight>, double> bermenApplyCandidateTrees(UniverseVertexSet& u
 		}
 
 
-		// for (; !candidateStack.empty(); candidateStack.pop_back()) {
-		// 	auto t = candidateStack.back();
 		for (int i=(int)(candidateStack.size())-1; i >=0; i--) {
 			auto t = candidateStack[i];
 
@@ -1297,17 +1023,10 @@ tuple<vector<EdgeWeight>, double> bermenApplyCandidateTrees(UniverseVertexSet& u
 
 			assert(includesInSet(M, E));
 			
-			// logger << "  ? " << "new: " << terminalNewEdges << " dics: " << terminalTreeDiscardingEdges << endl;
-			// logger << "    M: " << M << " E: " << E << endl;
-			
 			// E += terminalTreeDiscardingEdges;
-			//TODO: check for duplicates.
 			E.insert(terminalTreeDiscardingEdges.begin(), terminalTreeDiscardingEdges.end());
-			// logger << "    E += " << terminalTreeDiscardingEdges << endl;
 			if (includesInSet(terminalNewEdges, M)) {
-				// logger << "    A: " << tree << endl;
 				//apply
-				// logger << "    imputeTree ... " << leavesIndices << " " << tree << endl;
 				if (applyOnUniverse) {
 					tuple<vector<EdgeWeight>, double> t = imputeTree(
 						leavesIndices,
@@ -1315,7 +1034,6 @@ tuple<vector<EdgeWeight>, double> bermenApplyCandidateTrees(UniverseVertexSet& u
 						universeVertexSet,
 						false
 					);
-					// logger << "    imputeTree ! " << endl;
 					vector<EdgeWeight> ee = get<0>(t);
 					gEdges.insert(gEdges.end(), ee.begin(), ee.end());
 					
@@ -1328,36 +1046,22 @@ tuple<vector<EdgeWeight>, double> bermenApplyCandidateTrees(UniverseVertexSet& u
 					);
 					cost += t;
 				}
-				// logger << "  ! new: " << terminalNewEdges << " dics: " << terminalTreeDiscardingEdges << " ee: " << ee << endl;
-				// logger << "   universeVertexSet.cells.size()= " << universeVertexSet.cells.size() << endl;
 				for (auto e: terminalNewEdges) {
-					// logger << "    +e: " << e << endl;
-
 					ds.join(e.v, e.u);
 				}
-				// logger << "  G: " << g << endl;
-				// logger << "  M(f): " << M << " E: " << E << endl;
 
 			} else {
 				subtractEq(E, terminalNewEdges);
-				M = E; // HADI: I changed it from previous version, is it correct?!
-				// logger << "  MST ... " << endl;
+				M = E; 
 				mstEq(M);
-				// logger << "      done " << endl;
 			}
 
 			assert((int)M.size() == n-1);
 		}
 
 
-		// logger << "  applying M: " << M << endl;
-		// logger << "    ds: " << ds << endl;
-
 		for (auto e: M) {
-			// logger << "  +?e:M " << e.name1 << " " << e.name2 << endl;
 			if (!ds.isJoint(e.v, e.u)) {
-				// logger << "  +e:M " << e.name1 << " " << e.name2 << endl;
-
 				double ew = universeVertexSet.distance(e.v, e.u);
 				gEdges.push_back(EdgeWeight(
 					e.v, e.u,
@@ -1386,7 +1090,6 @@ tuple<vector<EdgeWeight>, double> optimizeTree(
 	/**
 	 * T always contain a tree between terminal nodes.
 	 */
-	// vector<EdgeExt> T = initTree(input);
 
 	assert(kk < MAXTREELEAFS);
 
@@ -1400,7 +1103,6 @@ tuple<vector<EdgeWeight>, double> optimizeTree(
 			distanceMatrix[v][u] = distanceMatrix[u][v] = w;
 		}
 	}
-	//double initTreeCost = 
 	mstEq(T);
 
 	int n = (int)input.size();
@@ -1421,11 +1123,7 @@ tuple<vector<EdgeWeight>, double> optimizeTree(
 	}
 
 
-	// double cost = treeCost(gEdges, universeVertexSet);
-	// logger << "result G: " << gEdges << " " << " cost: " << cost << endl;
 	return t;
-
-	// return actualTreeOfTerminalCollapsedTree(input, T);
 }
 
 // Removes degree two edges which does not provide any other information regarding input vertices
@@ -1437,8 +1135,6 @@ tuple<vector<EdgeWeight>, vector<int>> compressGraph(UniverseVertexSet& universe
 
 	for (auto e: edges) {
 		if (e.w == 0) {
-			// assert(universeVertexSet.distance(e.v, e.u) == 0);
-			// logger << "  0-edge: " << e.v << " " << e.u << ": " << universeVertexSet.getVertex(e.v) << " " << universeVertexSet.getVertex(e.u) << endl;
 			ds.join(e.v, e.u);
 		}
 	}
@@ -1450,8 +1146,6 @@ tuple<vector<EdgeWeight>, vector<int>> compressGraph(UniverseVertexSet& universe
 			minOfSet[p] = p;
 		minOfSet[p] = min(minOfSet[p], i);
 	}
-
-	// logger << "minOfSet: " << minOfSet << endl;
 
 	vector<EdgeWeight> E;
 	for (auto e: edges) {
@@ -1470,10 +1164,8 @@ tuple<vector<EdgeWeight>, vector<int>> compressGraph(UniverseVertexSet& universe
 	}
 
 	//We should add input vertices, even there are more than one with equal sequences.
-	// logger << "  minOfSet: input cells " << inputCells << endl;
 	for (auto v: inputCells) {
 		if (V.find(v) == V.end()) {
-			// logger << "  minOfSet: Add input " << v << endl;
 			V.insert(v);
 			E.push_back(EdgeWeight(
 				v,
@@ -1532,10 +1224,8 @@ map<int,Cell> calculateImputation(UniverseVertexSet& universeVertexSet, const ve
 	for (auto e: edges) {
 		if (input.find(e.v) != input.end()) {
 			rewriteCellXValuesTo(imputation[e.v], universeVertexSet.getVertex(e.u));
-			// logger << "imp " << e.v << " -> " << e.u << endl;
 		} else if (input.find(e.u) != input.end()) {
 			rewriteCellXValuesTo(imputation[e.u], universeVertexSet.getVertex(e.v));
-			// logger << "imp " << e.u << " -> " << e.v << endl;
 		}
 	}
 	Cell aCell;

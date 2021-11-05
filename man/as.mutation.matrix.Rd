@@ -21,8 +21,7 @@ Conversion of ten-state sequencing matrix to 0/1-mutation matrix.
 }
 \examples{
 ## A small 10-state matrix
-seq = data.frame("C1" = c("C/C", "C/C"), "C2" = c("A/A", NA), 
-        "C3" = c("C/C", "A/A"), stringsAsFactors = TRUE)
+seq = data.frame("C1" = c("C/C", "C/C"), "C2" = c("A/A", NA), "C3" = c("C/C", "A/A"))
 ## Convert it to mutation matrix
 as.mutation.matrix(seq)
 #   C1 C2 C3
