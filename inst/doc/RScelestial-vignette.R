@@ -44,3 +44,35 @@ SP.distance.matrix
 vertices <- rownames(SP.distance.matrix)
 sum(abs(D.distance.matrix[vertices,vertices] - SP.distance.matrix))
 
+## ----load-libraries-----------------------------------------------------------
+library(stringr)
+library(seqinr)
+
+## ----load-data----------------------------------------------------------------
+data(phylip, package = "seqinr")
+
+
+## ----data-cleaning------------------------------------------------------------
+# Removing non-informative columns and duplicate rows.
+mcb <-  toupper(t(sapply(seq(phylip$seq), function(i) unlist(strsplit(phylip$seq[[i]], '')))))
+ccb <- as.character(phylip$seq)
+occb <- order(ccb)
+cbColMask <- sapply(seq(ncol(mcb)), function(j) length(levels(as.factor(mcb[,j]))) == 1)
+cbRowMask <- rep(TRUE, length(ccb))
+for (i in seq(length(ccb))) {
+    if (i == 1 || ccb[occb[i]] != ccb[occb[i-1]]) {
+        cbRowMask[occb[i]] <- FALSE
+    }
+}
+mcbRows <- apply(mcb[!cbRowMask, !cbColMask], MARGIN = 1, FUN = function(a) paste0(str_replace(a, "-", "X"), collapse = ""))
+
+
+## ----run-scelestial-----------------------------------------------------------
+n.seq <- data.frame(nodes = phylip$nam[!cbRowMask], seq = mcbRows)
+seq2 <- data.frame(t(as.ten.state.matrix.from.node.seq(n.seq)), stringsAsFactors = TRUE)
+# Running Scelestial
+SP = scelestial(seq2, return.graph = TRUE)
+
+## ----plot---------------------------------------------------------------------
+tree.plot(SP, vertex.size=20, vertex.label.dist=0, asp = 0, vertex.label.cex = 1)
+

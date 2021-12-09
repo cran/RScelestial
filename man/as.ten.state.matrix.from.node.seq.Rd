@@ -37,7 +37,7 @@ This function is used for conversion of results of internal
 scelestial result to 10-state sequence matrices.
 }
 \examples{
-## A node sequence data framce
+## A node sequence data frame
 n.seq = data.frame("node" = c("C1", "C2"), "seq" = c("AKLTCXAAC", "AKKOCXAPC"))
 ## Convert it to ten state matrix
 as.ten.state.matrix.from.node.seq(n.seq)

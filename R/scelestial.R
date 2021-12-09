@@ -459,7 +459,7 @@ as.ten.state.matrix <- function(mut) {
 #'   to their 10-state representations.
 #' 
 #' @examples 
-#' ## A node sequence data framce
+#' ## A node sequence data frame
 #' n.seq = data.frame("node" = c("C1", "C2"), "seq" = c("AKLTCXAAC", "AKKOCXAPC"))
 #' ## Convert it to ten state matrix
 #' as.ten.state.matrix.from.node.seq(n.seq)
@@ -496,12 +496,12 @@ as.ten.state.matrix.from.node.seq <- function(n.seq) {
 				names(which(char.to.ten.state == paste(rev(strsplit(s, NULL)[[1]]), collapse='')))
 		}, char.to.ten.state, USE.NAMES = TRUE, simplify = TRUE);
 
-		for (i in 1:nchar(as.character(n.seq[,2][1]))) {
+		for (i in seq(nchar(as.character(n.seq[,2][1])))) {
 			X[[paste("V", i, sep = '')]] <-
 			apply(n.seq, 1, function(r, i, char.to.ten.state) char.to.ten.state[substr(r[2], i, i)], i, char.to.ten.state)	
 		}
 		rownames(X) <- n.seq[,1]
-		X
+		return(X)
 	}
 }
 

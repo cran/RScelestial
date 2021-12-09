@@ -5,6 +5,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // _scelestial
 List _scelestial(DataFrame data, int minK, int maxK);
 RcppExport SEXP _RScelestial__scelestial(SEXP dataSEXP, SEXP minKSEXP, SEXP maxKSEXP) {
