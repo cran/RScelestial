@@ -28,7 +28,7 @@ read.sequence.table <- function(file.name) {
 #' 
 #' @param seq The sequence matrix. Rows represent loci and columns represent samples.
 #'   Elements of the matrix represent 10-state genome sequencing results, or missing values.
-#'   I.e each element is in the format "X/Y" where X and Y are from the set {A, T, C, G}. 
+#'   I.e each element is in the format "X/Y" where X and Y are from the set \{A, T, C, G\}. 
 #'   There is a special case "./." that represents the missing value.
 #' @param mink The minimum k used in the calculation of k-restricted Steiner trees. 
 #'   It is supposed to be 3.

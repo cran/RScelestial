@@ -13,7 +13,7 @@ using namespace Rcpp;
 void __assert (const char *msg, const char *file, int line) {
     char buffer [100];
     snprintf( buffer, 100, "Assert Failure: %s at %s line #%d", msg, file, line );
-    ::Rf_error( buffer );
+    ::Rf_error( "%s", buffer );
 	throw std::invalid_argument(buffer);
 }
 
@@ -187,11 +187,11 @@ List _scelestial(DataFrame data, int minK=3, int maxK=4) {
 	// LOGGER(
 	// 	logger << "data.colnames.size() = " << colnames(data).size() << endl;
 	// )
-// 
+	cerr << "start of _scelestial " << endl;
 	try {
 		init();
-		UniverseVertexSet universeVertexSet;
-		load(universeVertexSet, data);
+		UniverseVertexSet* universeVertexSet = new UniverseVertexSet();
+		load(*universeVertexSet, data);
 
 		kRestrictionSteinerTreeMin = std::max(3, minK);
 		kRestrictionSteinerTreeMax = std::max(kRestrictionSteinerTreeMin, maxK);
@@ -201,25 +201,26 @@ List _scelestial(DataFrame data, int minK=3, int maxK=4) {
 			return R_NilValue;
 		}
 
-		assert(universeVertexSet.size() < MAX_SEQUENCE);
+		assert(universeVertexSet->size() < MAX_SEQUENCE);
 		assert(kRestrictionSteinerTreeMax < MAXTREELEAFS);
 		if (logLevel > 0)
-			Rcerr << "Loaded " << universeVertexSet.cells << endl;
+			Rcerr << "Loaded " << universeVertexSet->cells << endl;
 
 		vector<int> cells;
-		for (int i=0; i<universeVertexSet.size(); i++)
+		for (int i=0; i<universeVertexSet->size(); i++)
 			cells.push_back(i);
 
-		tuple<vector<EdgeWeight>, double> t = optimizeTree(universeVertexSet, cells, kRestrictionSteinerTreeMin, kRestrictionSteinerTreeMax );
+		tuple<vector<EdgeWeight>, double> t = optimizeTree(*universeVertexSet, cells, kRestrictionSteinerTreeMin, kRestrictionSteinerTreeMax );
 
 		if (logLevel > 0)
 			logger << "Tree optimized" << " cost=" << get<1>(t) << endl;
 
-		map<int,Cell> imputation = calculateImputation(universeVertexSet, get<0>(t), cells);
+		map<int,Cell> imputation = calculateImputation(*universeVertexSet, get<0>(t), cells);
 
 		//following will change the graph!
-		List l = getResultAsGraph(universeVertexSet, get<0>(t), get<1>(t), cells, imputation, getColumnNames(data));
-
+		List l = getResultAsGraph(*universeVertexSet, get<0>(t), get<1>(t), cells, imputation, getColumnNames(data));
+		
+		delete universeVertexSet;
 		
 		//TODO: ADD ROOT OPTION
 		if (logLevel > 0)

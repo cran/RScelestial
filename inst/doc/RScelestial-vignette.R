@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -19,7 +19,7 @@ library(igraph)
 D = synthesis(10, 20, 5, seed = 7)
 D
 
-## -----------------------------------------------------------------------------
+## ----run-scelestial-0---------------------------------------------------------
 seq = as.ten.state.matrix(D$seqeunce)
 SP = scelestial(seq, return.graph = TRUE)
 SP
@@ -46,6 +46,7 @@ sum(abs(D.distance.matrix[vertices,vertices] - SP.distance.matrix))
 
 ## ----load-libraries-----------------------------------------------------------
 library(stringr)
+if (!require("seqinr")) install.packages("seqinr")
 library(seqinr)
 
 ## ----load-data----------------------------------------------------------------

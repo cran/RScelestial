@@ -41,7 +41,7 @@ D
 
 # Inferring the phylogenetic tree
 
-```{r}
+```{r run-scelestial-0}
 seq = as.ten.state.matrix(D$seqeunce)
 SP = scelestial(seq, return.graph = TRUE)
 SP
@@ -82,6 +82,7 @@ Given a multiple sequence alignment, Scelestial infers the phylogeny of them. He
 First we load libraries to load a multiple alignment.
 ```{r load-libraries}
 library(stringr)
+if (!require("seqinr")) install.packages("seqinr")
 library(seqinr)
 ```
 

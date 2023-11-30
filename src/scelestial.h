@@ -93,16 +93,16 @@ const int nucleotideAcidCount = 4;
 const int allelCodingSize = 11;
 string allelCoding[][2] = {
 	{"A","A/A"},		
-						{"T","T/T"},
-						{"C","C/C"},
-						{"G","G/G"},
-						{"K","A/C"},
-						{"L","A/G"},
-						{"M","C/T"},
-						{"N","C/G"},
-						{"O","T/G"},
-						{"P","T/A"},
-						{"X","./."}};
+	{"T","T/T"},
+	{"C","C/C"},
+	{"G","G/G"},
+	{"K","A/C"},
+	{"L","A/G"},
+	{"M","C/T"},
+	{"N","C/G"},
+	{"O","T/G"},
+	{"P","T/A"},
+	{"X","./."}};
 map<string, char> allelCodingMap;
 map<char,int> allelCoding2Int;
 char int2AllelCoding[allelCodingSize];
@@ -216,6 +216,11 @@ struct DisjointSetArray {
 			parent[i] = -1;
 	}
 
+	DisjointSetArray(size_t sz) : parent(sz) {
+		for(size_t i=0; i<sz; i++)
+			parent[i] = -1;
+	}
+
 	template<typename It>
 	DisjointSetArray(It begin, It end) : parent(MAX_SEQUENCE)  {
 		for (It i = begin; i != end; i++) {
@@ -224,10 +229,12 @@ struct DisjointSetArray {
 	}
 
 	void add(int t) {
+		assert(t < (int)parent.size() && t >= 0);
 		parent[t] = t;
 	}
 
 	int parentStar(int t) const {
+		assert(t < (int)parent.size() && t >= 0);
 		if (parent[t] == t)
 			return t;
 		return parent[t] = parentStar(parent[t]);
@@ -273,7 +280,7 @@ struct GenerateAllTrees {
 
 	//output
 	vector<string> trees;
-	char treeRepresentation[100 * 8 * 3]; // MAXN * 3 * MAXLGN
+	char treeRepresentation[MAXNODE * MAXTREELEAFS * 3]; // MAXN * 3 * MAXLGN
 	int treeRepresentationEnd;
 	vector< vector<vector<int>> > outChilds;
 
@@ -405,7 +412,7 @@ struct GenerateAllTrees {
 };
 
 ostream& operator<<(ostream& os, const GenerateAllTrees& a) {
-	char tab[100];
+	char tab[1000];
 	for (int i=0; i<a.depth * 2; i++)
 		tab[i] = ' ';
 	tab[a.depth * 2] = 0;
@@ -832,7 +839,10 @@ vector<tuple<vector<vector<int>>, vector<EdgeWeight>, vector<EdgeWeight>, vector
 		IFDEBUG("choose created")
 
 
-		for (int tt=0; choose.isValid(); tt++, choose.next()) {
+		for (/*int tt=0*/; choose.isValid(); /*tt++,*/ choose.next()) {
+		
+			//IFDEBUG("REMOVE")
+			//if (tt > 100000) break;
 
 
 			if (logLevel > 0) {
@@ -908,6 +918,9 @@ vector<tuple<vector<vector<int>>, vector<EdgeWeight>, vector<EdgeWeight>, vector
 			{
 
 				double gain = bridgeCost - minC;
+				//IFDEBUG("REMOVE IT!")
+				//if (tt % 200 == 0)
+				//	gain = 1; // REMOVE IT!!!!!
 				if (gain > EPSILON) {
 					DisjointSetArray ds, ds2;
 					for (auto n : input) {
@@ -1128,17 +1141,21 @@ tuple<vector<EdgeWeight>, double> optimizeTree(
 
 // Removes degree two edges which does not provide any other information regarding input vertices
 tuple<vector<EdgeWeight>, vector<int>> compressGraph(UniverseVertexSet& universeVertexSet, const vector<EdgeWeight>& edges, const vector<int>& inputCells) {
-	DisjointSetArray ds;
+	if (logLevel > 2) cerr << "compressGraph::compressGraph" << std::endl;
+	DisjointSetArray ds(universeVertexSet.size());
+	if (logLevel > 2) cerr << "compressGraph::ds.join vertices" << " " << universeVertexSet.size() << " " << MAX_SEQUENCE << std::endl;
 	for (int i=0; i<universeVertexSet.size(); i++) {
 		ds.add(i);
 	}
 
+	if (logLevel > 2) cerr << "compressGraph::ds.join edges" << std::endl;
 	for (auto e: edges) {
 		if (e.w == 0) {
 			ds.join(e.v, e.u);
 		}
 	}
 
+	if (logLevel > 2) cerr << "compressGraph::filling minOfSet" << std::endl;
 	map<int, int> minOfSet;
 	for (int i=0; i<universeVertexSet.size(); i++) {
 		int p = ds.parentStar(i);
@@ -1147,6 +1164,7 @@ tuple<vector<EdgeWeight>, vector<int>> compressGraph(UniverseVertexSet& universe
 		minOfSet[p] = min(minOfSet[p], i);
 	}
 
+	if (logLevel > 2) cerr << "compressGraph::filling E" << std::endl;
 	vector<EdgeWeight> E;
 	for (auto e: edges) {
 		if (e.w != 0) {
@@ -1158,11 +1176,13 @@ tuple<vector<EdgeWeight>, vector<int>> compressGraph(UniverseVertexSet& universe
 		}
 	}
 
+	if (logLevel > 2) cerr << "compressGraph::filling V" << std::endl;
 	set<int> V;
 	for (auto m: minOfSet) {
 	   V.insert(m.second); 
 	}
 
+	if (logLevel > 2) cerr << "compressGraph::Adding vertices" << std::endl;
 	//We should add input vertices, even there are more than one with equal sequences.
 	for (auto v: inputCells) {
 		if (V.find(v) == V.end()) {
@@ -1175,10 +1195,104 @@ tuple<vector<EdgeWeight>, vector<int>> compressGraph(UniverseVertexSet& universe
 		}
 	}
 
+	if (logLevel > 2) cerr << "compressGraph::returning" << std::endl;
 	return make_tuple(E, vector<int>(V.begin(), V.end()));
 }
 
-void printResultAsGraph(ostream& os, UniverseVertexSet& universeVertexSet, const vector<EdgeWeight>& edges, double cost, const vector<int>& cells, const map<int, Cell>& imputation) {
+void reRootEdgeSetDFS(const map<int, vector<int>>& neighbors, map<int, int>& depth, int v, int d) {
+	depth[v] = d;
+	for (const auto &u: neighbors.find(v)->second) {
+		if (depth[u] == 0)
+			reRootEdgeSetDFS(neighbors, depth, u, d+1);
+	}
+}
+
+// Changes the order of nodes in the edge set such that newRoot is the new root of the resulting tree.
+// Note: e.v is the parent of e.u
+void reRootEdgeSet(vector<EdgeWeight>& e, const vector<int>& v, int newRoot) {
+	map<int, vector<int>> neighbors;
+	for (auto ee:e) {
+		neighbors[ee.v].push_back(ee.u);
+		neighbors[ee.u].push_back(ee.v);
+	}
+	map<int, int> depth;
+	reRootEdgeSetDFS(neighbors, depth, newRoot, 1);
+	if (logLevel > 1)
+		cerr << "depth: " << depth << " " << newRoot << " nei: " << neighbors << endl;
+	for (int vv: v) {
+		assert(depth[vv] != 0);
+	}
+	//cerr << depth << endl;
+	for (auto& ee: e) {
+		if (depth[ee.v] > depth[ee.u])
+			std::swap(ee.v, ee.u);
+	}
+	for (auto& ee: e) {
+		assert(depth[ee.v] < depth[ee.u]);
+	}
+}
+
+// any vertex in v which is present in inputCells in the tree is replaced with a new cell.
+// sequence of new vertices are added to universeVertexSet.
+// if newRoot is not -1 and is replaced with another internal node in the tree, the replaced-to vertex intex is returned
+//    otherwise new neighbor of newRoot is returned.
+// note that this function is not working for the case that v.size() <= 2
+int moveSamplesToLeaf(vector<EdgeWeight>& e, vector<int>& v, const set<int>& inputCells, UniverseVertexSet& universeVertexSet, const map<int, Cell>& imputation, int newRoot) {
+	map<int, int> deg;
+	for (auto ee:e) {
+		deg[ee.v]++;
+		deg[ee.u]++;
+	}
+
+	map<int, int> replacedTo;
+	for (int vv : v) {
+		replacedTo[vv] = vv;
+	}
+
+	vector<int> newVertices;
+	for (int vv : v) {
+		if (deg[vv] > 1 && inputCells.find(vv) != inputCells.end()) {
+			Cell c;
+			if (imputation.find(vv) != imputation.end()) {
+			 	c.load(imputation.find(vv)->second.toString());
+			} else {
+				c = universeVertexSet.getVertex(vv);
+			}
+
+			int to = universeVertexSet.add(c);
+			replacedTo[vv] = to;
+			newVertices.push_back(to);
+			if (logLevel > 1)
+				logger << "Moving sample " << vv << " in tree to " << to << endl;
+		}
+	}
+
+	for (auto & ee : e) {
+		ee.v = replacedTo[ee.v];
+		ee.u = replacedTo[ee.u];
+	}
+
+	for (auto& vv : replacedTo) {
+		if (vv.first != vv.second) {
+			e.push_back(EdgeWeight(vv.second, vv.first, 0.0));
+		}
+	}
+
+	for (int vv : newVertices) {
+		v.push_back(vv);
+	}
+
+	//one neighbor of all the vertices
+	map<int,int> nei; 
+	for (auto & ee : e) {
+		nei[ee.v] = ee.u;
+		nei[ee.u] = ee.v;
+	}
+
+	return newRoot == -1 ? -1 : nei[newRoot];
+}
+
+void printResultAsGraph(ostream& os, UniverseVertexSet& universeVertexSet, const vector<EdgeWeight>& edges, double cost, const vector<int>& cells, const map<int, Cell>& imputation, int newRoot = -1, bool noInternalSample = false) {
 
 	tuple<vector<EdgeWeight>, vector<int>> tt = compressGraph(universeVertexSet, edges, cells);
 
@@ -1193,6 +1307,18 @@ void printResultAsGraph(ostream& os, UniverseVertexSet& universeVertexSet, const
 		inputCells.insert(c);
 	}
 	
+	if (noInternalSample) {
+		if (logLevel > 0)
+			logger << "Moving samples to leaves." << endl;
+		newRoot = moveSamplesToLeaf(e, v, inputCells, universeVertexSet, imputation, newRoot);
+		if (logLevel > 1)
+			logger << "newRoot = " << newRoot << endl;
+	}
+
+	if (newRoot != -1) {
+		reRootEdgeSet(e, v, newRoot);
+	}
+
 	os << v.size() << endl;
 	for (int j=0; j<(int)v.size(); j++) {
 		int i = v[j];
